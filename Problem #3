@@ -1,0 +1,39 @@
+; This was done individually
+
+; Start: mark the first symbol so we can restore it later
+0 _ _ * halt-reject
+0 0 X r o0
+0 1 Y r o1
+
+; Scan (odd/even), remembering first symbol via X/Y on tape
+; States o0/e0: first symbol was 0 (marked X)
+o0 0 0 r e0
+o0 1 1 r e0
+o0 _ _ l acc
+
+e0 0 0 r o0
+e0 1 1 r o0
+e0 _ _ l rej
+
+; States o1/e1: first symbol was 1 (marked Y)
+o1 0 0 r e1
+o1 1 1 r e1
+o1 _ _ l acc
+
+e1 0 0 r o1
+e1 1 1 r o1
+e1 _ _ l rej
+
+; Reject paths: restore X/Y to 0/1, leave rest unchanged
+rej 0 0 l rej
+rej 1 1 l rej
+rej X 0 * halt-reject
+rej Y 1 * halt-reject
+rej _ _ * halt-reject
+
+; Accept paths: erase everything except the first symbol, restore it 
+acc 0 _ l acc
+acc 1 _ l acc
+acc X 0 * halt-accept
+acc Y 1 * halt-accept
+acc _ _ r acc
