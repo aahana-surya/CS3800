@@ -1,9 +1,4 @@
-; hello
-
-; ----------------------------
-; VALIDATION: must be x#y, single #, both nonempty,
-; and no leading zeros unless exactly "0"
-; ----------------------------
+; this assignment was done individually, and resubmitted to be more consise.
 
 ; start in state 0
 0 _ _ * halt-reject
@@ -56,11 +51,10 @@ rewind H H l rewind
 rewind _ _ r len_start
 
 ; ----------------------------
-; LENGTH COMPARE:
+; COMPARE:
 ; mark one bit in x and one bit in y per round.
-; If x longer => accept. If y longer => reject.
-; If equal length => restore and lex-compare.
-; Marking preserves bit values:
+; If x longer, accept. If y longer, reject.
+; If equal length, restore and lex-compare.
 ; x: 0->A, 1->B   y: 0->C, 1->D
 ; ----------------------------
 
@@ -105,10 +99,8 @@ y_check_remain 1 1 * halt-reject
 y_check_remain # # * halt-reject
 y_check_remain _ _ l restore_left
 
-; ----------------------------
-; RESTORE A/B/C/D back to 0/1, then lex-compare
-; ----------------------------
 
+; RESTORE A/B/C/D back to 0/1, then lex-compare
 ; go back to left end first
 restore_left 0 0 l restore_left
 restore_left 1 1 l restore_left
@@ -136,13 +128,10 @@ lex_rewind # # l lex_rewind
 lex_rewind _ _ r lex_start
 
 ; ----------------------------
-; LEXICOGRAPHIC COMPARE (same length):
-; Find first differing bit:
+; COMPARE (same length):
 ; if x has 1 and y has 0 => accept
 ; if x has 0 and y has 1 => reject
 ; if identical => accept
-;
-; mark processed bits:
 ; x: 0->E, 1->F
 ; y: 0->G, 1->H
 ; ----------------------------
