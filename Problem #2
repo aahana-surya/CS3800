@@ -1,0 +1,19 @@
+; This assignment was done individually
+
+; If input is blank, reject
+0 _ _ * halt-reject
+
+; If input is ""
+0 0 0 r 0
+0 1 1 r seen1
+
+; If Matched "1"
+seen1 _ _ * halt-reject
+seen1 1 1 r seen1
+seen1 0 0 r seen10
+
+; If Matched "10"
+seen10 _ _ * halt-reject
+seen10 0 0 r 0
+seen10 1 1 r halt-accept
+
