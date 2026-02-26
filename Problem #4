@@ -1,42 +1,47 @@
 ; this assignment was done individually, and resubmitted to be more consise.
 
-; start in state 0
+
+; PARSE + VALIDATE x#y
+
 0 _ _ * halt-reject
 0 # # * halt-reject
-0 0 0 r x0_check
-0 1 1 r x1_scan
+0 0 0 r x0_only
+0 1 1 r x_scan
 
-; if x starts with 0, next must be #
-x0_check # # r after_hash
-x0_check 0 0 * halt-reject
-x0_check 1 1 * halt-reject
-x0_check _ _ * halt-reject
+; x begins with 0 => x must be exactly "0" then '#'
+x0_only # # r y_start
+x0_only 0 0 * halt-reject
+x0_only 1 1 * halt-reject
+x0_only _ _ * halt-reject
 
-; if x starts with 1, scan until #
-x1_scan 0 0 r x1_scan
-x1_scan 1 1 r x1_scan
-x1_scan # # r after_hash
-x1_scan _ _ * halt-reject
+; x begins with 1 => scan until '#'
+x_scan 0 0 r x_scan
+x_scan 1 1 r x_scan
+x_scan # # r y_start
+x_scan _ _ * halt-reject
 
-; after #, y must exist and be valid, and there must be no extra #
-after_hash _ _ * halt-reject
-after_hash # # * halt-reject
-after_hash 0 0 r y0_check
-after_hash 1 1 r y1_scan
+; y must exist, must not start with '#', and must be valid
+y_start _ _ * halt-reject
+y_start # # * halt-reject
+y_start 0 0 r y0_only
+y_start 1 1 r y_scan
 
-; if y starts with 0, it must be exactly "0" (so next must be blank)
-y0_check _ _ l rewind
-y0_check 0 0 * halt-reject
-y0_check 1 1 * halt-reject
-y0_check # # * halt-reject
+; y begins with 0 => y must be exactly "0" and then blank
+y0_only _ _ l rewind
+y0_only 0 0 * halt-reject
+y0_only 1 1 * halt-reject
+y0_only # # * halt-reject
 
-; if y starts with 1, scan to blank; no # allowed
-y1_scan 0 0 r y1_scan
-y1_scan 1 1 r y1_scan
-y1_scan # # * halt-reject
-y1_scan _ _ l rewind
+; y begins with 1 => scan to blank, no extra '#'
+y_scan 0 0 r y_scan
+y_scan 1 1 r y_scan
+y_scan # # * halt-reject
+y_scan _ _ l rewind
 
-; rewind to left end, then begin length-compare
+; ----------------------------
+; REWIND to left end
+; ----------------------------
+
 rewind 0 0 l rewind
 rewind 1 1 l rewind
 rewind # # l rewind
@@ -48,70 +53,69 @@ rewind E E l rewind
 rewind F F l rewind
 rewind G G l rewind
 rewind H H l rewind
-rewind _ _ r len_start
+rewind _ _ r len_round
 
 ; ----------------------------
-; COMPARE:
-; mark one bit in x and one bit in y per round.
-; If x longer, accept. If y longer, reject.
-; If equal length, restore and lex-compare.
-; x: 0->A, 1->B   y: 0->C, 1->D
+; LENGTH COMPARE by pairing bits
+; If y runs out first => x longer => ACCEPT
+; If x runs out first => y longer => REJECT
+; If both run out same time => restore then LEX compare
 ; ----------------------------
 
-; find next unmarked bit in x (before #)
-len_start A A r len_start
-len_start B B r len_start
-len_start 0 A r len_to_hash
-len_start 1 B r len_to_hash
-len_start # # r y_check_remain   ; no more bits in x
+; find next unmarked bit in x
+len_round A A r len_round
+len_round B B r len_round
+len_round 0 A r go_hash_from_x
+len_round 1 B r go_hash_from_x
+len_round # # r x_done_check_y   ; x has no more bits
 
-; go to # (we might already be past some marks)
-len_to_hash 0 0 r len_to_hash
-len_to_hash 1 1 r len_to_hash
-len_to_hash A A r len_to_hash
-len_to_hash B B r len_to_hash
-len_to_hash # # r len_in_y
-len_to_hash _ _ * halt-reject
+; move to '#'
+go_hash_from_x 0 0 r go_hash_from_x
+go_hash_from_x 1 1 r go_hash_from_x
+go_hash_from_x A A r go_hash_from_x
+go_hash_from_x B B r go_hash_from_x
+go_hash_from_x # # r mark_y_bit
+go_hash_from_x _ _ * halt-reject
 
-; find next unmarked bit in y; if none => x longer => accept
-len_in_y C C r len_in_y
-len_in_y D D r len_in_y
-len_in_y 0 C r len_return
-len_in_y 1 D r len_return
-len_in_y _ _ * halt-accept
-len_in_y # # * halt-reject
+; mark next unmarked bit in y; if none => y exhausted => ACCEPT
+mark_y_bit C C r mark_y_bit
+mark_y_bit D D r mark_y_bit
+mark_y_bit 0 C l back_left
+mark_y_bit 1 D l back_left
+mark_y_bit _ _ * halt-accept
+mark_y_bit # # * halt-reject
 
-; return to left end for next round
-len_return 0 0 l len_return
-len_return 1 1 l len_return
-len_return # # l len_return
-len_return A A l len_return
-len_return B B l len_return
-len_return C C l len_return
-len_return D D l len_return
-len_return _ _ r len_start
+; x exhausted: check whether y has any unmarked bits left
+x_done_check_y C C r x_done_check_y
+x_done_check_y D D r x_done_check_y
+x_done_check_y 0 0 * halt-reject
+x_done_check_y 1 1 * halt-reject
+x_done_check_y # # * halt-reject
+x_done_check_y _ _ l restore_rewind
 
-; x exhausted: check if y has any unmarked bits left
-y_check_remain C C r y_check_remain
-y_check_remain D D r y_check_remain
-y_check_remain 0 0 * halt-reject
-y_check_remain 1 1 * halt-reject
-y_check_remain # # * halt-reject
-y_check_remain _ _ l restore_left
+; return to left end for next length round
+back_left 0 0 l back_left
+back_left 1 1 l back_left
+back_left # # l back_left
+back_left A A l back_left
+back_left B B l back_left
+back_left C C l back_left
+back_left D D l back_left
+back_left _ _ r len_round
 
+; ----------------------------
+; RESTORE A/B/C/D to 0/1, then LEX compare
+; ----------------------------
 
-; RESTORE A/B/C/D back to 0/1, then lex-compare
-; go back to left end first
-restore_left 0 0 l restore_left
-restore_left 1 1 l restore_left
-restore_left # # l restore_left
-restore_left A A l restore_left
-restore_left B B l restore_left
-restore_left C C l restore_left
-restore_left D D l restore_left
-restore_left _ _ r restore_scan
+restore_rewind 0 0 l restore_rewind
+restore_rewind 1 1 l restore_rewind
+restore_rewind # # l restore_rewind
+restore_rewind A A l restore_rewind
+restore_rewind B B l restore_rewind
+restore_rewind C C l restore_rewind
+restore_rewind D D l restore_rewind
+restore_rewind _ _ r restore_scan
 
-; restore while scanning right
 restore_scan A 0 r restore_scan
 restore_scan B 1 r restore_scan
 restore_scan C 0 r restore_scan
@@ -121,59 +125,53 @@ restore_scan 1 1 r restore_scan
 restore_scan # # r restore_scan
 restore_scan _ _ l lex_rewind
 
-; rewind to left end for lex compare
 lex_rewind 0 0 l lex_rewind
 lex_rewind 1 1 l lex_rewind
 lex_rewind # # l lex_rewind
-lex_rewind _ _ r lex_start
+lex_rewind _ _ r lex_x
 
 ; ----------------------------
-; COMPARE (same length):
-; if x has 1 and y has 0 => accept
-; if x has 0 and y has 1 => reject
-; if identical => accept
-; x: 0->E, 1->F
-; y: 0->G, 1->H
+; LEX COMPARE (same length)
+; At first differing bit: 1 vs 0 => ACCEPT, 0 vs 1 => REJECT
+; If identical => ACCEPT
 ; ----------------------------
 
 ; find next unprocessed bit in x
-lex_start E E r lex_start
-lex_start F F r lex_start
-lex_start 0 E r lex_to_y0
-lex_start 1 F r lex_to_y1
-lex_start # # * halt-accept
+lex_x E E r lex_x
+lex_x F F r lex_x
+lex_x 0 E r lex_go_hash0
+lex_x 1 F r lex_go_hash1
+lex_x # # * halt-accept
 
-; move to y side (expect next unprocessed bit there)
-lex_to_y0 0 0 r lex_to_y0
-lex_to_y0 1 1 r lex_to_y0
-lex_to_y0 E E r lex_to_y0
-lex_to_y0 F F r lex_to_y0
-lex_to_y0 # # r y_find0
-lex_to_y0 _ _ * halt-reject
+lex_go_hash0 0 0 r lex_go_hash0
+lex_go_hash0 1 1 r lex_go_hash0
+lex_go_hash0 E E r lex_go_hash0
+lex_go_hash0 F F r lex_go_hash0
+lex_go_hash0 # # r lex_y0
+lex_go_hash0 _ _ * halt-reject
 
-lex_to_y1 0 0 r lex_to_y1
-lex_to_y1 1 1 r lex_to_y1
-lex_to_y1 E E r lex_to_y1
-lex_to_y1 F F r lex_to_y1
-lex_to_y1 # # r y_find1
-lex_to_y1 _ _ * halt-reject
+lex_go_hash1 0 0 r lex_go_hash1
+lex_go_hash1 1 1 r lex_go_hash1
+lex_go_hash1 E E r lex_go_hash1
+lex_go_hash1 F F r lex_go_hash1
+lex_go_hash1 # # r lex_y1
+lex_go_hash1 _ _ * halt-reject
 
-; in y: skip processed, compare current bit
-y_find0 G G r y_find0
-y_find0 H H r y_find0
-y_find0 0 G l lex_back
-y_find0 1 H * halt-reject
-y_find0 _ _ * halt-reject
-y_find0 # # * halt-reject
+; in y: skip processed, compare
+lex_y0 G G r lex_y0
+lex_y0 H H r lex_y0
+lex_y0 0 G l lex_back
+lex_y0 1 H * halt-reject
+lex_y0 _ _ * halt-reject
+lex_y0 # # * halt-reject
 
-y_find1 G G r y_find1
-y_find1 H H r y_find1
-y_find1 0 G * halt-accept
-y_find1 1 H l lex_back
-y_find1 _ _ * halt-reject
-y_find1 # # * halt-reject
+lex_y1 G G r lex_y1
+lex_y1 H H r lex_y1
+lex_y1 0 G * halt-accept
+lex_y1 1 H l lex_back
+lex_y1 _ _ * halt-reject
+lex_y1 # # * halt-reject
 
-; go back to left end and continue comparing next position
 lex_back 0 0 l lex_back
 lex_back 1 1 l lex_back
 lex_back # # l lex_back
@@ -181,4 +179,4 @@ lex_back E E l lex_back
 lex_back F F l lex_back
 lex_back G G l lex_back
 lex_back H H l lex_back
-lex_back _ _ r lex_start
+lex_back _ _ r lex_x
