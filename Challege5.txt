@@ -1,0 +1,353 @@
+; Challenge Problems 5 — Problem 1 (Binary Addition)
+; I did this individually
+; Assumptions (matches the simulator style used in your other TMs):
+; - Blank symbol is _
+; - Input alphabet {0,1,_} and exactly one _ between x and y
+; - We do NOT need to reject malformed inputs (per prompt)
+; ---------------------------
+;  1: find x/y separator, mark as S
+; ---------------------------
+0 0 0 r find_sep
+0 1 1 r find_sep
+0 _ S r find_end_y
+
+find_sep 0 0 r find_sep
+find_sep 1 1 r find_sep
+find_sep _ S r find_end_y
+
+; ---------------------------
+;  2: find end of y (first blank after y), mark it as P
+; ---------------------------
+find_end_y 0 0 r find_end_y
+find_end_y 1 1 r find_end_y
+find_end_y _ P l rewind_to_P_left
+
+; ---------------------------
+; Rewind left to just before P (so we can start scanning y from the right)
+; ---------------------------
+rewind_to_P_left 0 0 l rewind_to_P_left
+rewind_to_P_left 1 1 l rewind_to_P_left
+rewind_to_P_left C C l rewind_to_P_left
+rewind_to_P_left D D l rewind_to_P_left
+rewind_to_P_left P P * add_c0_seekY0
+
+; ===========================
+; ADDITION (build sum LSB-first, appended to the right of P)
+; Carry=0 states start with add_c0_*
+; Carry=1 states start with add_c1_*
+; ===========================
+
+; ---------------------------
+; Seek next unprocessed y bit from right side (leftwards from P)
+; If hit S before seeing 0/1 => ybit = 0
+; ---------------------------
+add_c0_seekY0 P P l add_c0_seekY0
+add_c0_seekY0 C C l add_c0_seekY0
+add_c0_seekY0 D D l add_c0_seekY0
+add_c0_seekY0 0 C l add_c0_seekX_y0
+add_c0_seekY0 1 D l add_c0_seekX_y1
+add_c0_seekY0 S S l add_c0_seekX_yZ
+
+add_c1_seekY0 P P l add_c1_seekY0
+add_c1_seekY0 C C l add_c1_seekY0
+add_c1_seekY0 D D l add_c1_seekY0
+add_c1_seekY0 0 C l add_c1_seekX_y0
+add_c1_seekY0 1 D l add_c1_seekX_y1
+add_c1_seekY0 S S l add_c1_seekX_yZ
+
+; ---------------------------
+; Seek next unprocessed x bit from just left of S (move left until find 0/1 or blank)
+; If reach blank _ => xbit = 0
+; (We are currently somewhere left of S already; keep moving left.)
+; ---------------------------
+; carry=0, ybit=0
+add_c0_seekX_y0 A A l add_c0_seekX_y0
+add_c0_seekX_y0 B B l add_c0_seekX_y0
+add_c0_seekX_y0 0 A r add_c0_goWrite_x0y0
+add_c0_seekX_y0 1 B r add_c0_goWrite_x1y0
+add_c0_seekX_y0 _ _ r add_c0_goWrite_x0y0
+
+; carry=0, ybit=1
+add_c0_seekX_y1 A A l add_c0_seekX_y1
+add_c0_seekX_y1 B B l add_c0_seekX_y1
+add_c0_seekX_y1 0 A r add_c0_goWrite_x0y1
+add_c0_seekX_y1 1 B r add_c0_goWrite_x1y1
+add_c0_seekX_y1 _ _ r add_c0_goWrite_x0y1
+
+; carry=0, ybit=0 (y exhausted)
+add_c0_seekX_yZ A A l add_c0_seekX_yZ
+add_c0_seekX_yZ B B l add_c0_seekX_yZ
+add_c0_seekX_yZ 0 A r add_c0_goWrite_x0y0
+add_c0_seekX_yZ 1 B r add_c0_goWrite_x1y0
+add_c0_seekX_yZ _ _ r add_c0_goWrite_x0y0
+
+; carry=1, ybit=0
+add_c1_seekX_y0 A A l add_c1_seekX_y0
+add_c1_seekX_y0 B B l add_c1_seekX_y0
+add_c1_seekX_y0 0 A r add_c1_goWrite_x0y0
+add_c1_seekX_y0 1 B r add_c1_goWrite_x1y0
+add_c1_seekX_y0 _ _ r add_c1_goWrite_x0y0
+
+; carry=1, ybit=1
+add_c1_seekX_y1 A A l add_c1_seekX_y1
+add_c1_seekX_y1 B B l add_c1_seekX_y1
+add_c1_seekX_y1 0 A r add_c1_goWrite_x0y1
+add_c1_seekX_y1 1 B r add_c1_goWrite_x1y1
+add_c1_seekX_y1 _ _ r add_c1_goWrite_x0y1
+
+; carry=1, y exhausted
+add_c1_seekX_yZ A A l add_c1_seekX_yZ
+add_c1_seekX_yZ B B l add_c1_seekX_yZ
+add_c1_seekX_yZ 0 A r add_c1_goWrite_x0y0
+add_c1_seekX_yZ 1 B r add_c1_goWrite_x1y0
+add_c1_seekX_yZ _ _ r add_c1_goWrite_x0y0
+
+; ---------------------------
+; Go to P then to the end of current sum and append next bit.
+; (Sum region is to the RIGHT of P; initially empty.)
+; ---------------------------
+add_c0_goWrite_x0y0 0 0 r add_c0_goWrite_x0y0
+add_c0_goWrite_x0y0 1 1 r add_c0_goWrite_x0y0
+add_c0_goWrite_x0y0 A A r add_c0_goWrite_x0y0
+add_c0_goWrite_x0y0 B B r add_c0_goWrite_x0y0
+add_c0_goWrite_x0y0 C C r add_c0_goWrite_x0y0
+add_c0_goWrite_x0y0 D D r add_c0_goWrite_x0y0
+add_c0_goWrite_x0y0 S S r add_c0_goWrite_x0y0
+add_c0_goWrite_x0y0 P P r sum_end_write0_c0   ; 0+0+0 => bit 0 carry 0
+
+add_c0_goWrite_x1y0 0 0 r add_c0_goWrite_x1y0
+add_c0_goWrite_x1y0 1 1 r add_c0_goWrite_x1y0
+add_c0_goWrite_x1y0 A A r add_c0_goWrite_x1y0
+add_c0_goWrite_x1y0 B B r add_c0_goWrite_x1y0
+add_c0_goWrite_x1y0 C C r add_c0_goWrite_x1y0
+add_c0_goWrite_x1y0 D D r add_c0_goWrite_x1y0
+add_c0_goWrite_x1y0 S S r add_c0_goWrite_x1y0
+add_c0_goWrite_x1y0 P P r sum_end_write1_c0   ; 1+0+0 => bit 1 carry 0
+
+add_c0_goWrite_x0y1 0 0 r add_c0_goWrite_x0y1
+add_c0_goWrite_x0y1 1 1 r add_c0_goWrite_x0y1
+add_c0_goWrite_x0y1 A A r add_c0_goWrite_x0y1
+add_c0_goWrite_x0y1 B B r add_c0_goWrite_x0y1
+add_c0_goWrite_x0y1 C C r add_c0_goWrite_x0y1
+add_c0_goWrite_x0y1 D D r add_c0_goWrite_x0y1
+add_c0_goWrite_x0y1 S S r add_c0_goWrite_x0y1
+add_c0_goWrite_x0y1 P P r sum_end_write1_c0   ; 0+1+0 => bit 1 carry 0
+
+add_c0_goWrite_x1y1 0 0 r add_c0_goWrite_x1y1
+add_c0_goWrite_x1y1 1 1 r add_c0_goWrite_x1y1
+add_c0_goWrite_x1y1 A A r add_c0_goWrite_x1y1
+add_c0_goWrite_x1y1 B B r add_c0_goWrite_x1y1
+add_c0_goWrite_x1y1 C C r add_c0_goWrite_x1y1
+add_c0_goWrite_x1y1 D D r add_c0_goWrite_x1y1
+add_c0_goWrite_x1y1 S S r add_c0_goWrite_x1y1
+add_c0_goWrite_x1y1 P P r sum_end_write0_c1   ; 1+1+0 => bit 0 carry 1
+
+add_c1_goWrite_x0y0 0 0 r add_c1_goWrite_x0y0
+add_c1_goWrite_x0y0 1 1 r add_c1_goWrite_x0y0
+add_c1_goWrite_x0y0 A A r add_c1_goWrite_x0y0
+add_c1_goWrite_x0y0 B B r add_c1_goWrite_x0y0
+add_c1_goWrite_x0y0 C C r add_c1_goWrite_x0y0
+add_c1_goWrite_x0y0 D D r add_c1_goWrite_x0y0
+add_c1_goWrite_x0y0 S S r add_c1_goWrite_x0y0
+add_c1_goWrite_x0y0 P P r sum_end_write1_c0   ; 0+0+1 => bit 1 carry 0
+
+add_c1_goWrite_x1y0 0 0 r add_c1_goWrite_x1y0
+add_c1_goWrite_x1y0 1 1 r add_c1_goWrite_x1y0
+add_c1_goWrite_x1y0 A A r add_c1_goWrite_x1y0
+add_c1_goWrite_x1y0 B B r add_c1_goWrite_x1y0
+add_c1_goWrite_x1y0 C C r add_c1_goWrite_x1y0
+add_c1_goWrite_x1y0 D D r add_c1_goWrite_x1y0
+add_c1_goWrite_x1y0 S S r add_c1_goWrite_x1y0
+add_c1_goWrite_x1y0 P P r sum_end_write0_c1   ; 1+0+1 => bit 0 carry 1
+
+add_c1_goWrite_x0y1 0 0 r add_c1_goWrite_x0y1
+add_c1_goWrite_x0y1 1 1 r add_c1_goWrite_x0y1
+add_c1_goWrite_x0y1 A A r add_c1_goWrite_x0y1
+add_c1_goWrite_x0y1 B B r add_c1_goWrite_x0y1
+add_c1_goWrite_x0y1 C C r add_c1_goWrite_x0y1
+add_c1_goWrite_x0y1 D D r add_c1_goWrite_x0y1
+add_c1_goWrite_x0y1 S S r add_c1_goWrite_x0y1
+add_c1_goWrite_x0y1 P P r sum_end_write0_c1   ; 0+1+1 => bit 0 carry 1
+
+add_c1_goWrite_x1y1 0 0 r add_c1_goWrite_x1y1
+add_c1_goWrite_x1y1 1 1 r add_c1_goWrite_x1y1
+add_c1_goWrite_x1y1 A A r add_c1_goWrite_x1y1
+add_c1_goWrite_x1y1 B B r add_c1_goWrite_x1y1
+add_c1_goWrite_x1y1 C C r add_c1_goWrite_x1y1
+add_c1_goWrite_x1y1 D D r add_c1_goWrite_x1y1
+add_c1_goWrite_x1y1 S S r add_c1_goWrite_x1y1
+add_c1_goWrite_x1y1 P P r sum_end_write1_c1   ; 1+1+1 => bit 1 carry 1
+
+; Find end of sum (blank) and write bit, then go back to P to continue
+sum_end_write0_c0 0 0 r sum_end_write0_c0
+sum_end_write0_c0 1 1 r sum_end_write0_c0
+sum_end_write0_c0 _ 0 l back_to_P_c0
+
+sum_end_write1_c0 0 0 r sum_end_write1_c0
+sum_end_write1_c0 1 1 r sum_end_write1_c0
+sum_end_write1_c0 _ 1 l back_to_P_c0
+
+sum_end_write0_c1 0 0 r sum_end_write0_c1
+sum_end_write0_c1 1 1 r sum_end_write0_c1
+sum_end_write0_c1 _ 0 l back_to_P_c1
+
+sum_end_write1_c1 0 0 r sum_end_write1_c1
+sum_end_write1_c1 1 1 r sum_end_write1_c1
+sum_end_write1_c1 _ 1 l back_to_P_c1
+
+; Return left to P, then check if there are unprocessed bits left in x or y
+back_to_P_c0 0 0 l back_to_P_c0
+back_to_P_c0 1 1 l back_to_P_c0
+back_to_P_c0 P P * check_done_c0
+
+back_to_P_c1 0 0 l back_to_P_c1
+back_to_P_c1 1 1 l back_to_P_c1
+back_to_P_c1 P P * check_done_c1
+
+; If any unprocessed 0/1 exists left of P in y or left of S in x => continue
+; Otherwise, finish (append carry if needed), then reverse sum, then restore marks.
+
+check_done_c0 P P l scan_left_for_unproc_c0
+check_done_c1 P P l scan_left_for_unproc_c1
+
+scan_left_for_unproc_c0 0 0 * add_c0_seekY0
+scan_left_for_unproc_c0 1 1 * add_c0_seekY0
+scan_left_for_unproc_c0 A A l scan_left_for_unproc_c0
+scan_left_for_unproc_c0 B B l scan_left_for_unproc_c0
+scan_left_for_unproc_c0 C C l scan_left_for_unproc_c0
+scan_left_for_unproc_c0 D D l scan_left_for_unproc_c0
+scan_left_for_unproc_c0 S S l scan_left_for_unproc_c0
+scan_left_for_unproc_c0 _ _ r finish_no_carry
+
+scan_left_for_unproc_c1 0 0 * add_c1_seekY0
+scan_left_for_unproc_c1 1 1 * add_c1_seekY0
+scan_left_for_unproc_c1 A A l scan_left_for_unproc_c1
+scan_left_for_unproc_c1 B B l scan_left_for_unproc_c1
+scan_left_for_unproc_c1 C C l scan_left_for_unproc_c1
+scan_left_for_unproc_c1 D D l scan_left_for_unproc_c1
+scan_left_for_unproc_c1 S S l scan_left_for_unproc_c1
+scan_left_for_unproc_c1 _ _ r finish_with_carry
+
+; Append carry=1 if needed
+finish_with_carry 0 0 r finish_with_carry
+finish_with_carry 1 1 r finish_with_carry
+finish_with_carry S S r finish_with_carry
+finish_with_carry A A r finish_with_carry
+finish_with_carry B B r finish_with_carry
+finish_with_carry C C r finish_with_carry
+finish_with_carry D D r finish_with_carry
+finish_with_carry P P r sum_end_write1_c0   ; write final carry '1', then proceed to finishing
+
+finish_no_carry 0 0 r finish_no_carry
+finish_no_carry 1 1 r finish_no_carry
+finish_no_carry S S r finish_no_carry
+finish_no_carry A A r finish_no_carry
+finish_no_carry B B r finish_no_carry
+finish_no_carry C C r finish_no_carry
+finish_no_carry D D r finish_no_carry
+finish_no_carry P P r prep_reverse
+
+; ===========================
+; Reverse the sum block in-place (currently LSB-first)
+; ===========================
+
+; Move to first sum digit (right of P). If sum is empty (shouldn't happen), just restore.
+prep_reverse 0 0 r prep_reverse
+prep_reverse 1 1 r prep_reverse
+prep_reverse P P r rev_set_left
+
+; Set left pointer at first digit; if blank => sum empty
+rev_set_left _ _ l restore_all
+rev_set_left 0 L r rev_seek_right_store0
+rev_set_left 1 L r rev_seek_right_store1
+
+; Seek right end (blank), then step left to last digit
+rev_seek_right_store0 0 0 r rev_seek_right_store0
+rev_seek_right_store0 1 1 r rev_seek_right_store0
+rev_seek_right_store0 _ _ l rev_at_right_store0
+
+rev_seek_right_store1 0 0 r rev_seek_right_store1
+rev_seek_right_store1 1 1 r rev_seek_right_store1
+rev_seek_right_store1 _ _ l rev_at_right_store1
+
+; If right pointer hits L (same cell or crossed), done reversing this pass
+rev_at_right_store0 L L r rev_unmark_L_done
+rev_at_right_store1 L L r rev_unmark_L_done
+
+; Swap:
+rev_at_right_store0 0 R l go_left_write0_to_L_then_write0_right
+rev_at_right_store0 1 R l go_left_write1_to_L_then_write0_right
+
+rev_at_right_store1 0 R l go_left_write0_to_L_then_write1_right
+rev_at_right_store1 1 R l go_left_write1_to_L_then_write1_right
+
+; Go left to L and set it to the right digit (0 or 1)
+go_left_write0_to_L_then_write0_right 0 0 l go_left_write0_to_L_then_write0_right
+go_left_write0_to_L_then_write0_right 1 1 l go_left_write0_to_L_then_write0_right
+go_left_write0_to_L_then_write0_right R R l go_left_write0_to_L_then_write0_right
+go_left_write0_to_L_then_write0_right L 0 r go_right_set_right_to0_move_in
+
+go_left_write1_to_L_then_write0_right 0 0 l go_left_write1_to_L_then_write0_right
+go_left_write1_to_L_then_write0_right 1 1 l go_left_write1_to_L_then_write0_right
+go_left_write1_to_L_then_write0_right R R l go_left_write1_to_L_then_write0_right
+go_left_write1_to_L_then_write0_right L 1 r go_right_set_right_to0_move_in
+
+go_left_write0_to_L_then_write1_right 0 0 l go_left_write0_to_L_then_write1_right
+go_left_write0_to_L_then_write1_right 1 1 l go_left_write0_to_L_then_write1_right
+go_left_write0_to_L_then_write1_right R R l go_left_write0_to_L_then_write1_right
+go_left_write0_to_L_then_write1_right L 0 r go_right_set_right_to1_move_in
+
+go_left_write1_to_L_then_write1_right 0 0 l go_left_write1_to_L_then_write1_right
+go_left_write1_to_L_then_write1_right 1 1 l go_left_write1_to_L_then_write1_right
+go_left_write1_to_L_then_write1_right R R l go_left_write1_to_L_then_write1_right
+go_left_write1_to_L_then_write1_right L 1 r go_right_set_right_to1_move_in
+
+; Go right to R and set it to original left digit (0 or 1), then move inward:
+; - left pointer moves one step right (we'll mark it L again)
+; - right pointer moves one step left automatically by next iteration (via seeking end)
+go_right_set_right_to0_move_in 0 0 r go_right_set_right_to0_move_in
+go_right_set_right_to0_move_in 1 1 r go_right_set_right_to0_move_in
+go_right_set_right_to0_move_in R 0 l rev_move_leftptr
+
+go_right_set_right_to1_move_in 0 0 r go_right_set_right_to1_move_in
+go_right_set_right_to1_move_in 1 1 r go_right_set_right_to1_move_in
+go_right_set_right_to1_move_in R 1 l rev_move_leftptr
+
+; Move left to the first position of the (new) unreversed interior:
+; find the left end by scanning left to P, then right one, then skip already-fixed prefix by one.
+rev_move_leftptr 0 0 l rev_move_leftptr
+rev_move_leftptr 1 1 l rev_move_leftptr
+rev_move_leftptr P P r rev_set_left_next
+
+rev_set_left_next 0 0 r rev_set_left_next_skip
+rev_set_left_next 1 1 r rev_set_left_next_skip
+rev_set_left_next _ _ l restore_all
+
+; Skip one cell into interior (this is a simple inward move)
+rev_set_left_next_skip 0 0 * rev_set_left
+rev_set_left_next_skip 1 1 * rev_set_left
+rev_set_left_next_skip _ _ l restore_all
+
+; If pointers crossed, clean up L marker
+rev_unmark_L_done 0 0 l rev_unmark_L_done
+rev_unmark_L_done 1 1 l rev_unmark_L_done
+rev_unmark_L_done P P l restore_all
+
+; ===========================
+; Restore all markers and separators to final required output
+; - A->0, B->1, C->0, D->1
+; - S-> _ , P-> _
+; ===========================
+restore_all 0 0 l restore_all
+restore_all 1 1 l restore_all
+restore_all A 0 l restore_all
+restore_all B 1 l restore_all
+restore_all C 0 l restore_all
+restore_all D 1 l restore_all
+restore_all S _ l restore_all
+restore_all P _ l restore_all
+restore_all _ _ r halt
+
+halt 0 0 * halt
+halt 1 1 * halt
+halt _ _ * halt-accept
