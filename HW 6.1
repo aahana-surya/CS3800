@@ -1,0 +1,79 @@
+; Problem 1 (Character Counting) TM
+; Language: L = { w in {a,b,c}* : |w|c > |w|a + |w|b }
+; Single-tape strategy:
+;   Pair each unmarked a or b with a distinct c.
+;   - Repeatedly find an unmarked a/b, mark it (a->A, b->B),
+;     then find an unmarked c and mark it (c->C).
+;   - If ever no unmarked c exists to pair, reject.
+;   - When no unmarked a/b remain, accept iff there exists an unmarked c.
+
+; Tape alphabet: {a,b,c,A,B,C,_}
+; Halt states: halt-accept, halt-reject
+
+; ----------------------------
+; Start: validate empty vs nonempty handled naturally by scan
+; ----------------------------
+0 _ _ * halt-reject
+0 a a * scan_ab
+0 b b * scan_ab
+0 c c * scan_ab
+
+; ----------------------------
+; Scan for next unmarked a or b
+; ----------------------------
+scan_ab A A r scan_ab
+scan_ab B B r scan_ab
+scan_ab C C r scan_ab
+scan_ab c c r scan_ab
+scan_ab a A l rewind_for_c
+scan_ab b B l rewind_for_c
+scan_ab _ _ l final_rewind_for_check
+
+; ----------------------------
+; After marking an a/b, rewind left, then seek an unmarked c to match it
+; ----------------------------
+rewind_for_c A A l rewind_for_c
+rewind_for_c B B l rewind_for_c
+rewind_for_c C C l rewind_for_c
+rewind_for_c a a l rewind_for_c
+rewind_for_c b b l rewind_for_c
+rewind_for_c c c l rewind_for_c
+rewind_for_c _ _ r seek_c
+
+seek_c A A r seek_c
+seek_c B B r seek_c
+seek_c C C r seek_c
+seek_c a a r seek_c
+seek_c b b r seek_c
+seek_c c C l rewind_to_start
+seek_c _ _ * halt-reject
+
+; ----------------------------
+; Rewind to start, continue scanning for the next a/b
+; ----------------------------
+rewind_to_start A A l rewind_to_start
+rewind_to_start B B l rewind_to_start
+rewind_to_start C C l rewind_to_start
+rewind_to_start a a l rewind_to_start
+rewind_to_start b b l rewind_to_start
+rewind_to_start c c l rewind_to_start
+rewind_to_start _ _ r scan_ab
+
+; ----------------------------
+; No unmarked a/b remain: accept iff an unmarked c exists
+; ----------------------------
+final_rewind_for_check A A l final_rewind_for_check
+final_rewind_for_check B B l final_rewind_for_check
+final_rewind_for_check C C l final_rewind_for_check
+final_rewind_for_check a a l final_rewind_for_check
+final_rewind_for_check b b l final_rewind_for_check
+final_rewind_for_check c c l final_rewind_for_check
+final_rewind_for_check _ _ r check_c
+
+check_c A A r check_c
+check_c B B r check_c
+check_c C C r check_c
+check_c a a r check_c
+check_c b b r check_c
+check_c c c * halt-accept
+check_c _ _ * halt-reject
