@@ -1,17 +1,8 @@
-; Problem 1 (Character Counting) TM
-; Language: L = { w in {a,b,c}* : |w|c > |w|a + |w|b }
-; Single-tape strategy:
-;   Pair each unmarked a or b with a distinct c.
-;   - Repeatedly find an unmarked a/b, mark it (a->A, b->B),
-;     then find an unmarked c and mark it (c->C).
-;   - If ever no unmarked c exists to pair, reject.
-;   - When no unmarked a/b remain, accept iff there exists an unmarked c.
-
-; Tape alphabet: {a,b,c,A,B,C,_}
-; Halt states: halt-accept, halt-reject
+; Homework 6 Problem 1
+; I did this assignment individually
 
 ; ----------------------------
-; Start: validate empty vs nonempty handled naturally by scan
+; Start: validate empty vs nonempty
 ; ----------------------------
 0 _ _ * halt-reject
 0 a a * scan_ab
