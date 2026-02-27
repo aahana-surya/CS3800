@@ -1,8 +1,5 @@
 ; this assignment was done individually, and resubmitted to be more consise.
 
-
-; PARSE + VALIDATE x#y
-
 0 _ _ * halt-reject
 0 # # * halt-reject
 0 0 0 r x0_only
@@ -38,10 +35,6 @@ y_scan 1 1 r y_scan
 y_scan # # * halt-reject
 y_scan _ _ l rewind
 
-; ----------------------------
-; REWIND to left end
-; ----------------------------
-
 rewind 0 0 l rewind
 rewind 1 1 l rewind
 rewind # # l rewind
@@ -54,13 +47,6 @@ rewind F F l rewind
 rewind G G l rewind
 rewind H H l rewind
 rewind _ _ r len_round
-
-; ----------------------------
-; LENGTH COMPARE by pairing bits
-; If y runs out first => x longer => ACCEPT
-; If x runs out first => y longer => REJECT
-; If both run out same time => restore then LEX compare
-; ----------------------------
 
 ; find next unmarked bit in x
 len_round A A r len_round
@@ -103,10 +89,6 @@ back_left C C l back_left
 back_left D D l back_left
 back_left _ _ r len_round
 
-; ----------------------------
-; RESTORE A/B/C/D to 0/1, then LEX compare
-; ----------------------------
-
 restore_rewind 0 0 l restore_rewind
 restore_rewind 1 1 l restore_rewind
 restore_rewind # # l restore_rewind
@@ -130,13 +112,6 @@ lex_rewind 1 1 l lex_rewind
 lex_rewind # # l lex_rewind
 lex_rewind _ _ r lex_x
 
-; ----------------------------
-; LEX COMPARE (same length)
-; At first differing bit: 1 vs 0 => ACCEPT, 0 vs 1 => REJECT
-; If identical => ACCEPT
-; ----------------------------
-
-; find next unprocessed bit in x
 lex_x E E r lex_x
 lex_x F F r lex_x
 lex_x 0 E r lex_go_hash0
